@@ -1,5 +1,4 @@
 import pytest
-import json
 from unittest.mock import MagicMock, patch, AsyncMock
 import aiohttp
 from custom_components.aircontrolbase.api import (
@@ -29,7 +28,6 @@ async def test_login_success(api_client):
     with patch.object(api_client._session, 'post', return_value=mock_cm):
         await api_client.login()
         assert api_client._user_id == "user123"
-        assert "session_id=xyz" in api_client._session_id
 
 @pytest.mark.asyncio
 async def test_login_failure(api_client):
@@ -48,15 +46,14 @@ async def test_login_failure(api_client):
 @pytest.mark.asyncio
 async def test_login_connection_error(api_client):
     """Test login connection error (e.g. DNS failure)."""
-    with patch.object(api_client._session, 'post', side_effect=Exception("DNS failure")):
-        with pytest.raises(AirControlBaseConnectionError, match="Authentication failed: DNS failure"):
+    with patch.object(api_client._session, 'post', side_effect=aiohttp.ClientError("DNS failure")):
+        with pytest.raises(AirControlBaseConnectionError, match="Client error calling /web/user/login: DNS failure"):
             await api_client.login()
 
 @pytest.mark.asyncio
 async def test_get_devices_success(api_client):
     """Test successful device listing."""
     api_client._user_id = "user123"
-    api_client._session_id = "session_id=xyz"
     
     mock_response = MagicMock()
     mock_response.status = 200
@@ -87,7 +84,6 @@ async def test_get_devices_success(api_client):
 async def test_control_device_success(api_client):
     """Test successful device control."""
     api_client._user_id = "user123"
-    api_client._session_id = "session_id=xyz"
     
     mock_response = MagicMock()
     mock_response.status = 200
@@ -105,7 +101,6 @@ async def test_control_device_success(api_client):
 async def test_request_retry_on_expired_session(api_client):
     """Test that a request retries after session expiration."""
     api_client._user_id = "expired_user"
-    api_client._session_id = "expired_session"
 
     # First response: Session expired (code 401 in body)
     mock_response_expired = MagicMock()
@@ -147,16 +142,15 @@ async def test_request_retry_on_expired_session(api_client):
         
         assert len(devices) == 1
         assert api_client._user_id == "new_user"
-        assert api_client._session_id == "new_session"
 
 @pytest.mark.asyncio
 async def test_test_connection_success(api_client):
     """Test connection success."""
     with patch.object(api_client, 'login', new_callable=AsyncMock) as mock_login, \
-         patch.object(api_client, 'get_devices', new_callable=AsyncMock) as mock_get_devices:
+         patch.object(api_client, 'get_details', new_callable=AsyncMock) as mock_get_details:
         
-        mock_get_devices.return_value = [{"id": "1"}]
+        mock_get_details.return_value = [{"id": "1"}]
         result = await api_client.test_connection()
         assert result is True
         mock_login.assert_called_once()
-        mock_get_devices.assert_called_once()
+        mock_get_details.assert_called_once()

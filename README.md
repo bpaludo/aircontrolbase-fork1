@@ -1,9 +1,9 @@
 # 🌡️ AirControlBase - Home Assistant Integration
 
 [![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/enudler/homeassistant-aircontrol?include_prereleases&style=flat-square)](https://github.com/enudler/homeassistant-aircontrol/releases)
-[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/enudler/homeassistant-aircontrol/ci.yml?branch=main&style=flat-square)](https://github.com/enudler/homeassistant-aircontrol/actions)
-[![License](https://img.shields.io/github/license/enudler/homeassistant-aircontrol?style=flat-square)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/bpaludo/aircontrolbase-fork1?include_prereleases&style=flat-square)](https://github.com/bpaludo/aircontrolbase-fork1/releases)
+[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/bpaludo/aircontrolbase-fork1/ci.yml?branch=main&style=flat-square)](https://github.com/bpaludo/aircontrolbase-fork1/actions)
+[![License](https://img.shields.io/github/license/bpaludo/aircontrolbase-fork1?style=flat-square)](LICENSE)
 
 <p align="center">
   <img src="custom_components/aircontrolbase/logo.png" alt="AirControlBase Logo" width="200"/>
@@ -39,16 +39,32 @@ A custom Home Assistant integration for **AirControlBase** cloud-connected air c
 1. Open HACS in Home Assistant
 2. Click the three dots menu (⋮) in the top right
 3. Select **"Custom repositories"**
-4. Add this repository URL: `https://github.com/enudler/homeassistant-aircontrol`
+4. Add this repository URL: `https://github.com/bpaludo/aircontrolbase-fork1`
 5. Select **"Integration"** as the category
 6. Click **"Add"**
 7. Search for **"AirControlBase"** in HACS
 8. Click **"Download"**
 9. Restart Home Assistant
 
+### Existing Home Assistant Installations
+
+If this fork is replacing the original `enudler/homeassistant-aircontrol` installation,
+keep the Home Assistant integration domain as `aircontrolbase`.
+
+Do not rename these paths or constants:
+
+```text
+custom_components/aircontrolbase
+custom_components/aircontrolbase/manifest.json -> "domain": "aircontrolbase"
+custom_components/aircontrolbase/const.py -> DOMAIN = "aircontrolbase"
+```
+
+To avoid overwriting this fork, make sure HACS is no longer managing the original
+repository for this integration before installing this custom repository.
+
 ### Manual Installation
 
-1. Download the latest release from the [Releases](https://github.com/enudler/homeassistant-aircontrol/releases) page
+1. Download the latest release from the [Releases](https://github.com/bpaludo/aircontrolbase-fork1/releases) page
 2. Extract and copy the `custom_components/aircontrolbase` folder to your Home Assistant `config/custom_components/` directory
 3. Restart Home Assistant
 
@@ -56,7 +72,7 @@ A custom Home Assistant integration for **AirControlBase** cloud-connected air c
 
 For testing pre-release versions:
 
-1. Go to [Actions](https://github.com/enudler/homeassistant-aircontrol/actions)
+1. Go to [Actions](https://github.com/bpaludo/aircontrolbase-fork1/actions)
 2. Select a successful workflow run
 3. Download the `custom_components` artifact
 4. Extract and copy to your `config/custom_components/` directory
@@ -104,8 +120,8 @@ Your AC devices will be automatically discovered and added as climate entities.
 
 ```bash
 # Clone the repository
-git clone https://github.com/enudler/homeassistant-aircontrol.git
-cd homeassistant-aircontrol
+git clone https://github.com/bpaludo/aircontrolbase-fork1.git
+cd aircontrolbase-fork1
 
 # Create and activate virtual environment
 python -m venv venv
@@ -155,7 +171,7 @@ The project uses GitHub Actions for continuous integration:
 
 #### Option 1: Using GitHub Actions (Recommended)
 
-1. Go to [Actions](https://github.com/enudler/homeassistant-aircontrol/actions)
+1. Go to [Actions](https://github.com/bpaludo/aircontrolbase-fork1/actions)
 2. Select **"Create Tag and Release"** workflow
 3. Click **"Run workflow"**
 4. Enter the version (e.g., `1.0.0`)
@@ -286,8 +302,8 @@ Contributions are welcome! Please:
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/enudler/homeassistant-aircontrol/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/enudler/homeassistant-aircontrol/discussions)
+- **Issues**: [GitHub Issues](https://github.com/bpaludo/aircontrolbase-fork1/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/bpaludo/aircontrolbase-fork1/discussions)
 
 ---
 
