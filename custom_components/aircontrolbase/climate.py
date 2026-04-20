@@ -13,6 +13,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
+from homeassistant.components.climate.const import SWING_OFF, SWING_ON
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
@@ -63,7 +64,9 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{self._device_id}"
         self._attr_name = device["name"]
         self._attr_supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+            ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.FAN_MODE
+            | ClimateEntityFeature.SWING_MODE
         )
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_precision = PRECISION_WHOLE
@@ -78,6 +81,7 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
         self._attr_min_temp = 16
         self._attr_max_temp = 30
         self._attr_fan_modes = ["auto", "low", "medium", "high"]
+        self._attr_swing_modes = [SWING_ON, SWING_OFF]
 
     def _should_use_optimistic_state(self) -> bool:
         """Return whether local optimistic state should still be shown."""
@@ -230,6 +234,19 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
         return ["auto", "low", "medium", "high"]
 
     @property
+    def swing_mode(self) -> str:
+        """Return the current swing mode."""
+        swing = str(self._device.get("swing") or "").strip().lower()
+        if swing and swing not in ("0", "off", "n", "no", "false"):
+            return SWING_ON
+        return SWING_OFF
+
+    @property
+    def swing_modes(self) -> list[str]:
+        """Return the list of available swing modes."""
+        return [SWING_ON, SWING_OFF]
+
+    @property
     def icon(self) -> str:
         """Return the icon for the entity."""
         return "mdi:air-conditioner"
@@ -312,3 +329,20 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
             self._schedule_delayed_refresh()
         except Exception as err:
             _LOGGER.error("Failed to set fan mode for device %s: %s", self._device_id, err)
+
+    async def async_set_swing_mode(self, swing_mode: str) -> None:
+        """Set the swing mode."""
+        if swing_mode not in [SWING_ON, SWING_OFF]:
+            _LOGGER.error("Invalid swing mode %s for device %s", swing_mode, self._device_id)
+            return
+
+        operation_data = {"swing": "1" if swing_mode == SWING_ON else "0"}
+
+        try:
+            control_data = await self._async_build_control_context()
+            self._remember_local_change(control_data, operation_data)
+            await self._api.control_device(control_data, operation_data)
+            self.async_write_ha_state()
+            self._schedule_delayed_refresh()
+        except Exception as err:
+            _LOGGER.error("Failed to set swing mode for device %s: %s", self._device_id, err)
