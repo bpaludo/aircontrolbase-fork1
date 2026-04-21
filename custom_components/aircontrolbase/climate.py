@@ -63,11 +63,11 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
         self._refresh_task: asyncio.Task | None = None
         self._attr_unique_id = f"{DOMAIN}_{self._device_id}"
         self._attr_name = device["name"]
-        self._attr_supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE
-            | ClimateEntityFeature.FAN_MODE
-            | ClimateEntityFeature.SWING_MODE
-        )
+        supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+        if "swing" in device:
+            supported_features |= ClimateEntityFeature.SWING_MODE
+            self._attr_swing_modes = [SWING_ON, SWING_OFF]
+        self._attr_supported_features = supported_features
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_precision = PRECISION_WHOLE
         self._attr_target_temperature_step = 1
@@ -81,7 +81,25 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
         self._attr_min_temp = 16
         self._attr_max_temp = 30
         self._attr_fan_modes = ["auto", "low", "medium", "high"]
-        self._attr_swing_modes = [SWING_ON, SWING_OFF]
+
+    def _encode_swing_value(self, desired_on: bool, base_value: Any) -> Any:
+        """Encode swing value in the same shape as the upstream API returns."""
+        if isinstance(base_value, bool):
+            return desired_on
+        if isinstance(base_value, int):
+            return 1 if desired_on else 0
+
+        raw = str(base_value or "").strip().lower()
+        if raw in ("y", "n"):
+            return "y" if desired_on else "n"
+        if raw in ("on", "off"):
+            return "on" if desired_on else "off"
+        if raw in ("true", "false"):
+            return "true" if desired_on else "false"
+        if raw.isdigit():
+            return "1" if desired_on else "0"
+
+        return "1" if desired_on else "0"
 
     def _should_use_optimistic_state(self) -> bool:
         """Return whether local optimistic state should still be shown."""
@@ -236,10 +254,18 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
     @property
     def swing_mode(self) -> str:
         """Return the current swing mode."""
-        swing = str(self._device.get("swing") or "").strip().lower()
-        if swing and swing not in ("0", "off", "n", "no", "false"):
-            return SWING_ON
-        return SWING_OFF
+        swing_value = self._device.get("swing")
+        if swing_value is None:
+            return SWING_OFF
+        if isinstance(swing_value, bool):
+            return SWING_ON if swing_value else SWING_OFF
+        if isinstance(swing_value, int):
+            return SWING_ON if swing_value != 0 else SWING_OFF
+
+        swing = str(swing_value).strip().lower()
+        if swing in ("", "0", "off", "n", "no", "false"):
+            return SWING_OFF
+        return SWING_ON
 
     @property
     def swing_modes(self) -> list[str]:
@@ -336,10 +362,18 @@ class AirControlBaseClimate(CoordinatorEntity, ClimateEntity):
             _LOGGER.error("Invalid swing mode %s for device %s", swing_mode, self._device_id)
             return
 
-        operation_data = {"swing": "1" if swing_mode == SWING_ON else "0"}
-
         try:
             control_data = await self._async_build_control_context()
+            base_value = control_data.get("swing")
+            if base_value is None:
+                _LOGGER.warning(
+                    "Device %s does not expose a swing field. Swing control may not be supported.",
+                    self._device_id,
+                )
+
+            operation_data = {
+                "swing": self._encode_swing_value(swing_mode == SWING_ON, base_value),
+            }
             self._remember_local_change(control_data, operation_data)
             await self._api.control_device(control_data, operation_data)
             self.async_write_ha_state()
