@@ -1,4 +1,5 @@
 """Config flow for AirControlBase integration."""
+
 from __future__ import annotations
 
 import logging
@@ -11,8 +12,14 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client
 
-from .api import AirControlBaseAPI, AirControlBaseConnectionError, AirControlBaseAuthError
-from .const import DOMAIN, CONF_REFRESH_DELAY, DEFAULT_REFRESH_DELAY
+from .api import (
+    AirControlBaseAPI,
+    AirControlBaseAuthError,
+    AirControlBaseConnectionError,
+    AirControlBaseRateLimitError,
+    AirControlBaseTransientError,
+)
+from .const import DEFAULT_REFRESH_DELAY, CONF_REFRESH_DELAY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,19 +42,18 @@ class AirControlBaseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_PASSWORD],
                     session,
                 )
-                
+
                 _LOGGER.debug("Testing authentication for: %s", user_input[CONF_EMAIL])
-                
-                # Test the connection
-                if await api.test_connection():
-                    _LOGGER.info("Authentication successful for: %s", user_input[CONF_EMAIL])
-                    return self.async_create_entry(
-                        title=user_input[CONF_EMAIL],
-                        data=user_input,
-                    )
-                else:
-                    errors["base"] = "invalid_auth"
-                    
+
+                await api.test_connection()
+                _LOGGER.info("Authentication successful for: %s", user_input[CONF_EMAIL])
+                return self.async_create_entry(
+                    title=user_input[CONF_EMAIL],
+                    data=user_input,
+                )
+            except (AirControlBaseTransientError, AirControlBaseRateLimitError) as err:
+                _LOGGER.warning("Temporary AirControlBase failure during config flow: %s", err)
+                errors["base"] = "cannot_connect"
             except AirControlBaseConnectionError as err:
                 _LOGGER.error("Connection failed: %s", err)
                 errors["base"] = "cannot_connect"
